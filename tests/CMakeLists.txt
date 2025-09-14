@@ -5,6 +5,8 @@ add_executable(run_tests
     AlignedChunkAllocatorByMmap_test.cpp
     FreeChunkListCache_test.cpp
     CentralHeap_test.cpp
+    Bitmap_test.cpp
+    MemSubPool_test.cpp
 )
 
 # 链接测试程序。它需要链接我们自己的库 (mylib) 和 GoogleTest (gtest_main)
