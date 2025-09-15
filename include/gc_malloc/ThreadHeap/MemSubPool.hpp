@@ -24,18 +24,26 @@ public:
 
     void* Allocate();
     void Release(void* block_ptr);
-    
-    // 提供一些接口给 CentralHeap 使用
+
     bool IsFull() const;
     bool IsEmpty() const;
     size_t GetBlockSize() const;
+
+public:
+    MemSubPool* list_prev = nullptr;
+    MemSubPool* list_next = nullptr;
 
 private:
     static size_t CalculateDataOffset();
     static size_t CalculateTotalBlockCount(size_t block_size, size_t data_offset);
 
+    MemSubPool(const MemSubPool&) = delete;
+    MemSubPool& operator=(const MemSubPool&) = delete;
+    MemSubPool(MemSubPool&&) = delete;
+    MemSubPool& operator=(MemSubPool&&) = delete;
+
+private:
     const uint32_t magic_;
-    char pad1_[CACHE_LINE_SIZE - sizeof(uint32_t)];
     std::mutex lock_;
 
     const size_t block_size_;
@@ -46,9 +54,4 @@ private:
 
     unsigned char bitmap_buffer_[kBitMapLength];
     Bitmap bitmap_;
-
-    MemSubPool(const MemSubPool&) = delete;
-    MemSubPool& operator=(const MemSubPool&) = delete;
-    MemSubPool(MemSubPool&&) = delete;
-    MemSubPool& operator=(MemSubPool&&) = delete;
 };

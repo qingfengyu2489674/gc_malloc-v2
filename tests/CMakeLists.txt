@@ -7,6 +7,8 @@ add_executable(run_tests
     CentralHeap_test.cpp
     Bitmap_test.cpp
     MemSubPool_test.cpp
+    MemSubPoolList_test.cpp
+    SizeClassPoolManager_test.cpp
 )
 
 # 链接测试程序。它需要链接我们自己的库 (mylib) 和 GoogleTest (gtest_main)

@@ -56,7 +56,7 @@ CentralHeap::~CentralHeap() {
 // 3. CentralHeap 的核心逻辑实现
 // -----------------------------------------------------------------------------
 
-void* CentralHeap::acquire_chunk(size_t size) {
+void* CentralHeap::AcquireChunk(size_t size) {
     assert(size == kChunkSize);
 
     void* chunk = pFreeChunkCache->acquire();
@@ -64,9 +64,9 @@ void* CentralHeap::acquire_chunk(size_t size) {
         return chunk;
     }
 
-    bool refill_ok  = refill_cache();
+    bool refill_ok  = RefillCache();
     if(!refill_ok ) {
-        std::cerr << "[CentralHeap::acquire_chunk] WARNING: Failed to refill cache. "
+        std::cerr << "[CentralHeap::AcquireChunk] WARNING: Failed to refill cache. "
             << "System might be out of memory." << std::endl;
     }
 
@@ -78,7 +78,7 @@ void* CentralHeap::acquire_chunk(size_t size) {
     return nullptr;
 }
 
-bool CentralHeap::refill_cache() {
+bool CentralHeap::RefillCache() {
     if (pFreeChunkCache->get_cache_count() > 0) {
         return true;
     }
@@ -93,7 +93,7 @@ bool CentralHeap::refill_cache() {
     return true;
 }
 
-void CentralHeap::release_chunk(void* chunk, size_t size) {
+void CentralHeap::ReleaseChunk(void* chunk, size_t size) {
     assert(size == kChunkSize);
 
     if(pFreeChunkCache->get_cache_count() < kMaxWatermarkInChunks) {

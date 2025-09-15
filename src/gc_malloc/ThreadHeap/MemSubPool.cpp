@@ -29,7 +29,6 @@ size_t MemSubPool::CalculateTotalBlockCount(size_t block_size, size_t data_offse
 
 MemSubPool::MemSubPool(size_t block_size):
     magic_(kPoolMagic),
-    pad1_{0},
     lock_(),
     block_size_(block_size),
     data_offset_(CalculateDataOffset()),

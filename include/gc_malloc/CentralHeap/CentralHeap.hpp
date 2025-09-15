@@ -9,8 +9,8 @@ class CentralHeap {
 public:
     static CentralHeap& GetInstance();
 
-    void* acquire_chunk(size_t size);
-    void release_chunk(void* chunk, size_t size);
+    void* AcquireChunk(size_t size);
+    void ReleaseChunk(void* chunk, size_t size);
 
     CentralHeap(const CentralHeap&) = delete;
     CentralHeap& operator=(const CentralHeap&) = delete;
@@ -21,7 +21,7 @@ private:
     CentralHeap();
     virtual ~CentralHeap(); 
 
-    bool refill_cache(); 
+    bool RefillCache(); 
 
     ChunkAllocatorFromKernel* pChunkAllocatorFromKernel = nullptr;
     FreeChunkCache* pFreeChunkCache = nullptr;
