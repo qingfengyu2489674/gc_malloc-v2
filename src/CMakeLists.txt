@@ -9,6 +9,8 @@ add_library(gc_malloc STATIC
     gc_malloc/ThreadHeap/MemSubPoolList.cpp
     gc_malloc/ThreadHeap/SizeClassPoolManager.cpp
     gc_malloc/ThreadHeap/BlockHeader.cpp
+    gc_malloc/ThreadHeap/ManagedList.cpp
+    gc_malloc/ThreadHeap/SizeClassConfig.cpp
 )
 
 

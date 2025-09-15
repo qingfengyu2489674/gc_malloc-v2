@@ -19,14 +19,14 @@ public:
     ManagedList& operator=(ManagedList&&) = delete;
 
     // 1) 尾插：将内存块以尾插法插入链表（blk 非空，且可被重用其 next 指针）
-    void push_back(BlockHeader* blk) noexcept;
+    void attach_used(BlockHeader* blk) noexcept;
 
     // 2) 从“游标”位置开始遍历：
     //    - 跳过未释放的块；
     //    - 一旦遇到已释放的块（state == BlockState::Free），将其从链表移除并返回；
     //    - 若遍历至末尾未发现可回收块，返回 nullptr。
     // 说明：本过程单线程执行，不会出现竞态，不加锁。
-    BlockHeader* next_reclaimed() noexcept;
+    BlockHeader* reclaim_next() noexcept;
 
     // 3) 重置游标到链表头部（用于开始新一轮垃圾回收遍历）
     void reset_cursor() noexcept;

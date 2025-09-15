@@ -7,8 +7,9 @@ ManagedList::ManagedList() noexcept
       cursor_prev_(nullptr),
       cursor_cur_(nullptr) {}
 
-void ManagedList::push_back(BlockHeader* blk) noexcept {
+void ManagedList::attach_used(BlockHeader* blk) noexcept {
     if (!blk) return;
+    blk->store_used();
     blk->next = nullptr;
 
     if (!head_) {
@@ -21,7 +22,7 @@ void ManagedList::push_back(BlockHeader* blk) noexcept {
     tail_ = blk;
 }
 
-BlockHeader* ManagedList::next_reclaimed() noexcept {
+BlockHeader* ManagedList::reclaim_next() noexcept {
     // 如果游标未设置，认为没有开启遍历
     if (!cursor_cur_) return nullptr;
 
