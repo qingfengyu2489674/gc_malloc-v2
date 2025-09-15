@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cassert>
 
-namespace gc {
 
 namespace {
 
@@ -86,4 +85,3 @@ std::size_t SizeClassConfig::Normalize(std::size_t nbytes) noexcept {
     return ClassToSize(SizeToClass(nbytes));
 }
 
-} // namespace gc

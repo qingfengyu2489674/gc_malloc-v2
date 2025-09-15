@@ -3,8 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace gc {
-
 /**
  * SizeClassConfig
  * ------------------------------------------------------------
@@ -34,5 +32,3 @@ public:
     // 将任意请求尺寸规则化为实际分配尺寸（>= kMinAlloc，按 kAlignment 对齐）
     static std::size_t Normalize(std::size_t nbytes) noexcept;
 };
-
-} // namespace gc
