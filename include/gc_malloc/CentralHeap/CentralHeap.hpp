@@ -17,6 +17,9 @@ public:
     CentralHeap(CentralHeap&&) = delete;
     CentralHeap& operator=(CentralHeap&&) = delete;
 
+public:
+    static constexpr size_t kChunkSize = 2 * 1024 *1024;
+
 private:
     CentralHeap();
     virtual ~CentralHeap(); 
@@ -26,7 +29,6 @@ private:
     ChunkAllocatorFromKernel* pChunkAllocatorFromKernel = nullptr;
     FreeChunkCache* pFreeChunkCache = nullptr;
 
-    static constexpr size_t kChunkSize = 2 * 1024 *1024;
     static constexpr size_t kMaxWatermarkInChunks = 16;
     static constexpr size_t kTargetWatermarkInChunks = 8;
 };

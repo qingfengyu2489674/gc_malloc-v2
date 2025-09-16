@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 #include "gc_malloc/ThreadHeap/SizeClassConfig.hpp"
 
-using gc::SizeClassConfig;
 
 TEST(SizeClassConfig, MinAndMaxBoundaries) {
     // 最小边界：<= kMinAlloc 应映射到第0个size-class，Normalize 后得到 kMinAlloc

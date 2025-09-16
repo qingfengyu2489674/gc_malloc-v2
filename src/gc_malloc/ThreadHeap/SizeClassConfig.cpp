@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cassert>
 
-
 namespace {
 
 // 编译期静态常量表：规则化块尺寸（单位：字节）
@@ -34,11 +33,17 @@ constexpr std::size_t kClassSizeTable[] = {
     655360, 786432, 917504, 1048576
 };
 
-constexpr std::size_t kClassCount = sizeof(kClassSizeTable) / sizeof(kClassSizeTable[0]);
+// 本地计算的表项数
+constexpr std::size_t kLocalClassCount =
+    sizeof(kClassSizeTable) / sizeof(kClassSizeTable[0]);
+
+// 与头文件里的编译期常量强一致校验（防止忘改其中一处）
+static_assert(SizeClassConfig::kClassCount == kLocalClassCount,
+              "kClassSizeTable count must match SizeClassConfig::kClassCount");
 
 // 运行时二分查找：返回第一个 >= n 的索引（若超出则返回最后一个索引）
 inline std::size_t UpperIndexCeil(std::size_t n) noexcept {
-    std::size_t lo = 0, hi = kClassCount;
+    std::size_t lo = 0, hi = kLocalClassCount;
     while (lo < hi) {
         std::size_t mid = lo + ((hi - lo) >> 1);
         if (kClassSizeTable[mid] < n) {
@@ -47,26 +52,26 @@ inline std::size_t UpperIndexCeil(std::size_t n) noexcept {
             hi = mid;
         }
     }
-    // lo 为第一个 >= n 的位置；若 n 大于表最大值，则 lo==kClassCount，回退到最后一个
-    return (lo < kClassCount) ? lo : (kClassCount - 1);
+    // lo 为第一个 >= n 的位置；若 n 大于表最大值，则 lo==kLocalClassCount，回退到最后一个
+    return (lo < kLocalClassCount) ? lo : (kLocalClassCount - 1);
 }
 
-static_assert(kClassSizeTable[0] == SizeClassConfig::kMinAlloc, "First class must be 32 bytes.");
-static_assert((kClassSizeTable[kClassCount - 1] % SizeClassConfig::kAlignment) == 0, "Alignment must match.");
-static_assert(kClassSizeTable[kClassCount - 1] == SizeClassConfig::kMaxSmallAlloc,
+static_assert(kClassSizeTable[0] == SizeClassConfig::kMinAlloc,
+              "First class must be 32 bytes.");
+static_assert((kClassSizeTable[kLocalClassCount - 1] % SizeClassConfig::kAlignment) == 0,
+              "Alignment must match.");
+static_assert(kClassSizeTable[kLocalClassCount - 1] == SizeClassConfig::kMaxSmallAlloc,
               "Last class should be 1 MiB to match kMaxSmallAlloc.");
 
 } // namespace
 
 // ---- 接口实现 ----
 
-std::size_t SizeClassConfig::ClassCount() noexcept {
-    return kClassCount;
-}
+// 注意：不再实现 SizeClassConfig::ClassCount() （它在 .hpp 里是 constexpr）
 
 std::size_t SizeClassConfig::ClassToSize(std::size_t class_idx) noexcept {
-    assert(class_idx < kClassCount && "class_idx out of range");
-    if (class_idx >= kClassCount) return 0;
+    assert(class_idx < kLocalClassCount && "class_idx out of range");
+    if (class_idx >= kLocalClassCount) return 0;
     return kClassSizeTable[class_idx];
 }
 
@@ -75,7 +80,7 @@ std::size_t SizeClassConfig::SizeToClass(std::size_t nbytes) noexcept {
     if (nbytes <= kMinAlloc) return 0;
 
     // 超过小对象上限则映射到最后一个 size-class（上层通常会走大对象路径）
-    if (nbytes > kMaxSmallAlloc) return kClassCount - 1;
+    if (nbytes > kMaxSmallAlloc) return kLocalClassCount - 1;
 
     // 在表中找到第一个 >= nbytes 的 class
     return UpperIndexCeil(nbytes);
@@ -84,4 +89,3 @@ std::size_t SizeClassConfig::SizeToClass(std::size_t nbytes) noexcept {
 std::size_t SizeClassConfig::Normalize(std::size_t nbytes) noexcept {
     return ClassToSize(SizeToClass(nbytes));
 }
-

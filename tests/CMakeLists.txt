@@ -11,6 +11,7 @@ add_executable(run_tests
     SizeClassPoolManager_test.cpp
     ManagedList_test.cpp
     SizeClassConfig_test.cpp
+    ThreadHeap_test.cpp
 )
 
 # 链接测试程序。它需要链接我们自己的库 (mylib) 和 GoogleTest (gtest_main)

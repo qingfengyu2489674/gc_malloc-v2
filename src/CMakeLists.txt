@@ -11,6 +11,7 @@ add_library(gc_malloc STATIC
     gc_malloc/ThreadHeap/BlockHeader.cpp
     gc_malloc/ThreadHeap/ManagedList.cpp
     gc_malloc/ThreadHeap/SizeClassConfig.cpp
+    gc_malloc/ThreadHeap/ThreadHeap.cpp
 )
 
 

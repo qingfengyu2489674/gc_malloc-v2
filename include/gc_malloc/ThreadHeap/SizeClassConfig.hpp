@@ -19,9 +19,11 @@ public:
     static constexpr std::size_t kMaxSmallAlloc  = 1u * 1024u * 1024u;   // 小对象上限（> 则走大对象路径）
     static constexpr std::size_t kChunkSizeBytes = 2u * 1024u * 1024u;   // 与 CentralHeap 保持一致
 
+    static constexpr std::size_t kClassCount = 59;
+
+    static constexpr std::size_t ClassCount() noexcept { return kClassCount; }
+
 public:
-    // 返回 size-class 总数（由 .cpp 中的静态常量表决定）
-    static std::size_t ClassCount() noexcept;
 
     // 将“请求字节数”映射为 size-class 下标（保证 0 <= idx < ClassCount()）
     static std::size_t SizeToClass(std::size_t nbytes) noexcept;
