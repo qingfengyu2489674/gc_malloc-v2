@@ -14,7 +14,7 @@ public:
     void* acquire() override;
     void deposit(void* chunk) override;
 
-    size_t get_cache_count() const override;
+    size_t getCacheCount() const override;
 
     FreeChunkListCache() = default;
     ~FreeChunkListCache() override = default;

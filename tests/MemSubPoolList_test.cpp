@@ -26,21 +26,21 @@ TEST(MemSubPoolList, PushFrontOrderAndFront) {
     EXPECT_EQ(list.size(), 0u);
     EXPECT_EQ(list.front(), nullptr);
 
-    list.push_front(a);
+    list.pusFront(a);
     EXPECT_FALSE(list.empty());
     EXPECT_EQ(list.size(), 1u);
     EXPECT_EQ(list.front(), a);
     EXPECT_EQ(a->list_prev, nullptr);
     EXPECT_EQ(a->list_next, nullptr);
 
-    list.push_front(b); // 头插 -> b,a
+    list.pusFront(b); // 头插 -> b,a
     EXPECT_EQ(list.size(), 2u);
     EXPECT_EQ(list.front(), b);
     EXPECT_EQ(b->list_prev, nullptr);
     EXPECT_EQ(b->list_next, a);
     EXPECT_EQ(a->list_prev, b);
 
-    list.push_front(c); // 头插 -> c,b,a
+    list.pusFront(c); // 头插 -> c,b,a
     EXPECT_EQ(list.size(), 3u);
     EXPECT_EQ(list.front(), c);
     EXPECT_EQ(c->list_prev, nullptr);
@@ -61,13 +61,13 @@ TEST(MemSubPoolList, PopFrontUnlinksAndReturnsInLIFOHeadOrder) {
     auto* b = MakeNode(64);
     auto* c = MakeNode(64);
 
-    list.push_front(a); // a
-    list.push_front(b); // b,a
-    list.push_front(c); // c,b,a
+    list.pusFront(a); // a
+    list.pusFront(b); // b,a
+    list.pusFront(c); // c,b,a
 
     // 弹 c
     {
-        MemSubPool* x = list.pop_front();
+        MemSubPool* x = list.popFront();
         EXPECT_EQ(x, c);
         EXPECT_EQ(list.size(), 2u);
         EXPECT_EQ(list.front(), b);
@@ -78,7 +78,7 @@ TEST(MemSubPoolList, PopFrontUnlinksAndReturnsInLIFOHeadOrder) {
 
     // 弹 b
     {
-        MemSubPool* x = list.pop_front();
+        MemSubPool* x = list.popFront();
         EXPECT_EQ(x, b);
         EXPECT_EQ(list.size(), 1u);
         EXPECT_EQ(list.front(), a);
@@ -88,7 +88,7 @@ TEST(MemSubPoolList, PopFrontUnlinksAndReturnsInLIFOHeadOrder) {
 
     // 弹 a -> 空
     {
-        MemSubPool* x = list.pop_front();
+        MemSubPool* x = list.popFront();
         EXPECT_EQ(x, a);
         EXPECT_EQ(list.size(), 0u);
         EXPECT_TRUE(list.empty());
@@ -98,7 +98,7 @@ TEST(MemSubPoolList, PopFrontUnlinksAndReturnsInLIFOHeadOrder) {
     }
 
     // 空表再弹
-    EXPECT_EQ(list.pop_front(), nullptr);
+    EXPECT_EQ(list.popFront(), nullptr);
 
     delete a;
     delete b;
@@ -114,10 +114,10 @@ TEST(MemSubPoolList, RemoveHeadMiddleTailAndSingle) {
     auto* d = MakeNode(64);
 
     // 头插顺序：d,c,b,a
-    list.push_front(a);
-    list.push_front(b);
-    list.push_front(c);
-    list.push_front(d);
+    list.pusFront(a);
+    list.pusFront(b);
+    list.pusFront(c);
+    list.pusFront(d);
     ASSERT_EQ(list.size(), 4u);
     ASSERT_EQ(list.front(), d);
 

@@ -7,9 +7,9 @@ ManagedList::ManagedList() noexcept
       cursor_prev_(nullptr),
       cursor_cur_(nullptr) {}
 
-void ManagedList::attach_used(BlockHeader* blk) noexcept {
+void ManagedList::appendUsed(BlockHeader* blk) noexcept {
     if (!blk) return;
-    blk->store_used();
+    blk->storeUsed();
     blk->next = nullptr;
 
     if (!head_) {
@@ -22,7 +22,7 @@ void ManagedList::attach_used(BlockHeader* blk) noexcept {
     tail_ = blk;
 }
 
-BlockHeader* ManagedList::reclaim_next() noexcept {
+BlockHeader* ManagedList::reclaimNextFree() noexcept {
     // 如果游标未设置，认为没有开启遍历
     if (!cursor_cur_) return nullptr;
 
@@ -30,7 +30,7 @@ BlockHeader* ManagedList::reclaim_next() noexcept {
         BlockHeader* cur = cursor_cur_;
         BlockHeader* nxt = cur->next;
 
-        if (cur->load_state() == BlockState::Free) {
+        if (cur->loadState() == BlockState::Free) {
             // 从链表中摘除 cur
             if (cursor_prev_) {
                 cursor_prev_->next = nxt;
@@ -61,7 +61,7 @@ BlockHeader* ManagedList::reclaim_next() noexcept {
     return nullptr;
 }
 
-void ManagedList::reset_cursor() noexcept {
+void ManagedList::resetCursor() noexcept {
     cursor_prev_ = nullptr;
     cursor_cur_  = head_;
 }

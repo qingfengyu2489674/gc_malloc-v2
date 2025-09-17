@@ -39,27 +39,27 @@ protected:
 
 // 测试构造后，内存池的初始状态是否正确
 TEST_F(MemSubPoolTest, InitialStateIsCorrect) {
-    EXPECT_EQ(pool_->GetBlockSize(), block_size_);
-    EXPECT_TRUE(pool_->IsEmpty());
-    EXPECT_FALSE(pool_->IsFull());
+    EXPECT_EQ(pool_->getBlockSize(), block_size_);
+    EXPECT_TRUE(pool_->isEmpty());
+    EXPECT_FALSE(pool_->isFull());
 }
 
 // 测试基本的分配和释放功能
 TEST_F(MemSubPoolTest, HandlesSingleAllocationAndRelease) {
-    ASSERT_TRUE(pool_->IsEmpty());
+    ASSERT_TRUE(pool_->isEmpty());
 
     // 分配一个块
-    void* block = pool_->Allocate();
+    void* block = pool_->allocate();
     ASSERT_NE(block, nullptr);
     
     // 分配后，池不应为空
-    EXPECT_FALSE(pool_->IsEmpty());
+    EXPECT_FALSE(pool_->isEmpty());
 
     // 释放这个块
-    pool_->Release(block);
+    pool_->release(block);
 
     // 释放后，池应该再次变为空
-    EXPECT_TRUE(pool_->IsEmpty());
+    EXPECT_TRUE(pool_->isEmpty());
 }
 
 // 测试将内存池分配满的情况
@@ -68,7 +68,7 @@ TEST_F(MemSubPoolTest, HandlesFullAllocation) {
     
     // 持续分配，直到 Allocate 返回 nullptr
     while(true) {
-        void* block = pool_->Allocate();
+        void* block = pool_->allocate();
         if (block == nullptr) {
             break; // 池已满
         }
@@ -76,20 +76,20 @@ TEST_F(MemSubPoolTest, HandlesFullAllocation) {
     }
 
     // 此时，池应该是满的，但不应该是空的
-    EXPECT_TRUE(pool_->IsFull());
-    EXPECT_FALSE(pool_->IsEmpty());
+    EXPECT_TRUE(pool_->isFull());
+    EXPECT_FALSE(pool_->isEmpty());
     
     // 确认再次分配会失败
-    EXPECT_EQ(pool_->Allocate(), nullptr);
+    EXPECT_EQ(pool_->allocate(), nullptr);
 
     // 释放所有块
     for (void* block : allocated_blocks) {
-        pool_->Release(block);
+        pool_->release(block);
     }
 
     // 释放后，池应该是空的，但不应该是满的
-    EXPECT_TRUE(pool_->IsEmpty());
-    EXPECT_FALSE(pool_->IsFull());
+    EXPECT_TRUE(pool_->isEmpty());
+    EXPECT_FALSE(pool_->isFull());
 }
 
 // 一个非常简单的多线程测试，检查是否有数据竞争问题
@@ -104,7 +104,7 @@ TEST_F(MemSubPoolTest, IsThreadSafe) {
         
         // 分配阶段
         for (size_t j = 0; j < allocations_per_thread; ++j) {
-            void* block = pool_->Allocate();
+            void* block = pool_->allocate();
             if (block) {
                 local_blocks.push_back(block);
             }
@@ -112,7 +112,7 @@ TEST_F(MemSubPoolTest, IsThreadSafe) {
         
         // 释放阶段
         for (void* block : local_blocks) {
-            pool_->Release(block);
+            pool_->release(block);
         }
     };
 
@@ -126,5 +126,5 @@ TEST_F(MemSubPoolTest, IsThreadSafe) {
     }
 
     // 所有线程结束后，内存池应该 kembali为空
-    EXPECT_TRUE(pool_->IsEmpty()) << "Pool should be empty after all threads finished.";
+    EXPECT_TRUE(pool_->isEmpty()) << "Pool should be empty after all threads finished.";
 }

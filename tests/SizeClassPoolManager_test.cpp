@@ -52,8 +52,8 @@ static MemSubPool* TestRefillCallback(void* ctx) noexcept {
     auto* pool = new (mem) MemSubPool(c->block_size);
     c->allocated_chunks.push_back(mem);
 
-    EXPECT_TRUE(pool->IsEmpty());
-    EXPECT_EQ(pool->GetBlockSize(), c->block_size);
+    EXPECT_TRUE(pool->isEmpty());
+    EXPECT_EQ(pool->getBlockSize(), c->block_size);
     EXPECT_EQ(pool->list_prev, nullptr);
     EXPECT_EQ(pool->list_next, nullptr);
     return pool;

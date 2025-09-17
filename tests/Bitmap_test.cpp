@@ -33,18 +33,18 @@ TEST(BitmapTest, HandlesBasicOperations) {
     Bitmap bitmap(capacity, buffer, sizeof(buffer));
 
     // 初始状态
-    ASSERT_FALSE(bitmap.IsUsed(5));
+    ASSERT_FALSE(bitmap.isUsed(5));
 
     // 标记为占用
-    bitmap.MarkAsUsed(5);
-    EXPECT_TRUE(bitmap.IsUsed(5));
+    bitmap.markAsUsed(5);
+    EXPECT_TRUE(bitmap.isUsed(5));
     
     // 标记为空闲
-    bitmap.MarkAsFree(5);
-    EXPECT_FALSE(bitmap.IsUsed(5));
+    bitmap.markAsFree(5);
+    EXPECT_FALSE(bitmap.isUsed(5));
     
     // 越界检查
-    EXPECT_TRUE(bitmap.IsUsed(100));
+    EXPECT_TRUE(bitmap.isUsed(100));
 }
 
 // 测试套件名称: BitmapTest
@@ -54,19 +54,19 @@ TEST(BitmapTest, FindsFirstFreeBlockCorrectly) {
     unsigned char buffer[2];
     Bitmap bitmap(capacity, buffer, sizeof(buffer));
 
-    ASSERT_EQ(bitmap.FindFirstFree(), 0);
+    ASSERT_EQ(bitmap.findFirstFree(), 0);
 
-    bitmap.MarkAsUsed(0);
-    bitmap.MarkAsUsed(1);
-    EXPECT_EQ(bitmap.FindFirstFree(), 2);
+    bitmap.markAsUsed(0);
+    bitmap.markAsUsed(1);
+    EXPECT_EQ(bitmap.findFirstFree(), 2);
     
     // 从指定位置开始查找
-    bitmap.MarkAsUsed(2);
-    EXPECT_EQ(bitmap.FindFirstFree(2), 3);
+    bitmap.markAsUsed(2);
+    EXPECT_EQ(bitmap.findFirstFree(2), 3);
     
     // 测试位图已满的情况
     for(size_t i = 3; i < capacity; ++i) {
-        bitmap.MarkAsUsed(i);
+        bitmap.markAsUsed(i);
     }
-    EXPECT_EQ(bitmap.FindFirstFree(), Bitmap::kNotFound);
+    EXPECT_EQ(bitmap.findFirstFree(), Bitmap::k_not_found);
 }

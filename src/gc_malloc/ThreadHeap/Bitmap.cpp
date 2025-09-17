@@ -40,7 +40,7 @@ Bitmap::Bitmap(size_t capacity_in_bits, unsigned char* buffer, size_t buffer_siz
 
 
 // 将指定索引的位设置为 1，表示该内存块已被占用。
-void Bitmap::MarkAsUsed(size_t bit_index) {
+void Bitmap::markAsUsed(size_t bit_index) {
     if (bit_index >= capacity_in_bits_) {
         return;
     }
@@ -50,7 +50,7 @@ void Bitmap::MarkAsUsed(size_t bit_index) {
 }
 
 // 将指定索引的位设置为 0，表示该内存块已被释放/变为空闲。
-void Bitmap::MarkAsFree(size_t bit_index) {
+void Bitmap::markAsFree(size_t bit_index) {
     if (bit_index >= capacity_in_bits_) {
         return;
     }
@@ -60,7 +60,7 @@ void Bitmap::MarkAsFree(size_t bit_index) {
 }
 
 // 检查指定索引的位是否为 1 (即是否被占用)。
-bool Bitmap::IsUsed(size_t bit_index) const {
+bool Bitmap::isUsed(size_t bit_index) const {
     if (bit_index >= capacity_in_bits_) {
         return true;
     }
@@ -70,7 +70,7 @@ bool Bitmap::IsUsed(size_t bit_index) const {
 }
 
 // 从指定的起始位置开始，查找第一个为 0 (空闲) 的位。
-size_t Bitmap::FindFirstFree(size_t start_bit) const {
+size_t Bitmap::findFirstFree(size_t start_bit) const {
     size_t current_bit = start_bit;
     const size_t required_bytes = (capacity_in_bits_ + 7) / 8;
 
@@ -80,8 +80,8 @@ size_t Bitmap::FindFirstFree(size_t start_bit) const {
         size_t bit_in_byte = current_bit % 8;
         if (bit_in_byte != 0) {
             for (size_t bit = bit_in_byte; bit < 8; ++bit) {
-                if (current_bit >= capacity_in_bits_) return kNotFound;
-                if (!IsUsed(current_bit)) {
+                if (current_bit >= capacity_in_bits_) return k_not_found;
+                if (!isUsed(current_bit)) {
                     return current_bit;
                 }
                 current_bit++;
@@ -100,13 +100,13 @@ size_t Bitmap::FindFirstFree(size_t start_bit) const {
     if (byte_index < required_bytes) {
         current_bit = byte_index * 8;
         for (size_t bit = 0; bit < 8; ++bit) {
-            if (current_bit >= capacity_in_bits_) return kNotFound;
-            if (!IsUsed(current_bit)) {
+            if (current_bit >= capacity_in_bits_) return k_not_found;
+            if (!isUsed(current_bit)) {
                 return current_bit;
             }
             current_bit++;
         }
     }
 
-    return kNotFound; // 没有找到任何空闲位
+    return k_not_found; // 没有找到任何空闲位
 }

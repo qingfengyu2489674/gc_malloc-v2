@@ -22,20 +22,20 @@ public:
     explicit MemSubPool(size_t block_size);
     ~MemSubPool();
 
-    void* Allocate();
-    void Release(void* block_ptr);
+    void* allocate();
+    void release(void* block_ptr);
 
-    bool IsFull() const;
-    bool IsEmpty() const;
-    size_t GetBlockSize() const;
+    bool isFull() const;
+    bool isEmpty() const;
+    size_t getBlockSize() const;
 
 public:
     MemSubPool* list_prev = nullptr;
     MemSubPool* list_next = nullptr;
 
 private:
-    static size_t CalculateDataOffset();
-    static size_t CalculateTotalBlockCount(size_t block_size, size_t data_offset);
+    static size_t calculateDataOffset();
+    static size_t calculateTotalBlockCount(size_t block_size, size_t data_offset);
 
     MemSubPool(const MemSubPool&) = delete;
     MemSubPool& operator=(const MemSubPool&) = delete;

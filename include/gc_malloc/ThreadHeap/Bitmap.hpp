@@ -3,23 +3,21 @@
 #include <cstddef>
 #include <cstdint>
 
-
+// 简单位图：管理外部提供的缓冲区
 class Bitmap {
 public:
+    explicit Bitmap(std::size_t capacity_in_bits,
+                    unsigned char* buffer,
+                    std::size_t buffer_size_in_bytes);
 
-    explicit Bitmap(size_t capacity_in_bits, unsigned char* buffer, size_t buffer_size_in_bytes);
+    void   markAsUsed(std::size_t bit_index);
+    void   markAsFree(std::size_t bit_index);
+    bool   isUsed(std::size_t bit_index) const;
+    std::size_t findFirstFree(std::size_t start_bit = 0) const;
 
-    void MarkAsUsed(size_t bit_index);
-
-    void MarkAsFree(size_t bit_index);
-
-    bool IsUsed(size_t bit_index) const;
-
-    size_t FindFirstFree(size_t start_bit = 0) const;
-
-    static constexpr size_t kNotFound = static_cast<size_t>(-1);
+    static constexpr std::size_t k_not_found = static_cast<std::size_t>(-1);
 
 private:
-    unsigned char* buffer_;       // 指向外部提供的位图内存缓冲区
-    const size_t capacity_in_bits_; // 此位图管理的有效位数
+    unsigned char* buffer_;          // 外部位图缓冲区
+    const std::size_t capacity_in_bits_; // 管理的有效位数
 };

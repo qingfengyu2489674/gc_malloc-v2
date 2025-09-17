@@ -19,12 +19,11 @@ public:
     // 基本查询
     bool        empty() const noexcept;
     std::size_t size()  const noexcept;
-    MemSubPool* front() const noexcept;   // 可能为 nullptr
-
+    MemSubPool* front() const noexcept;
     // 修改操作（全部 O(1)）
-    void        push_front(MemSubPool* node) noexcept; // 头插；要求 node 当前未在任一链表中
-    MemSubPool* pop_front() noexcept;                  // 弹出并返回链表头；空则返回 nullptr
-    MemSubPool* remove(MemSubPool* node) noexcept;     // 从本链表中摘除并返回 node；若不在本链表中行为未定义
+    void        pusFront(MemSubPool* node) noexcept;
+    MemSubPool* popFront() noexcept;
+    MemSubPool* remove(MemSubPool* node) noexcept;
     
 private:
     MemSubPool* head_ = nullptr;

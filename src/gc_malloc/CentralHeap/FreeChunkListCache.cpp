@@ -34,7 +34,7 @@ void FreeChunkListCache::deposit(void* chunk) {
 }
 
 
-size_t FreeChunkListCache::get_cache_count() const {
+size_t FreeChunkListCache::getCacheCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return chunk_count_;
 }

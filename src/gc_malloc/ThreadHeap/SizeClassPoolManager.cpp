@@ -43,23 +43,23 @@ void* SizeClassPoolManager::allocateBlock() noexcept {
     MemSubPool* pool = acquireUsablePool();
     if (!pool) return nullptr;
 
-    void* block = pool->Allocate();
+    void* block = pool->allocate();
     if (!block) {
         // 理论上不应发生（我们刚从 empty/partial 取出），稳妥起见放回合适链表
-        if (pool->IsEmpty())       
-            empty_.push_front(pool);
-        else if (pool->IsFull())   
-            full_.push_front(pool);
+        if (pool->isEmpty())       
+            empty_.pusFront(pool);
+        else if (pool->isFull())   
+            full_.pusFront(pool);
         else                       
-            partial_.push_front(pool);
+            partial_.pusFront(pool);
         return nullptr;
     }
 
     // 分配后迁移：满 -> full；否则 -> partial
-    if (pool->IsFull()) 
-        full_.push_front(pool);
+    if (pool->isFull()) 
+        full_.pusFront(pool);
     else                
-        partial_.push_front(pool);
+        partial_.pusFront(pool);
 
     return block;
 }
@@ -69,15 +69,15 @@ bool SizeClassPoolManager::releaseBlock(void* ptr) noexcept {
 
     MemSubPool* pool = ptrToOwnerPool(ptr);
     // 简易校验：块大小是否匹配（不能完全证明属于本管理器，但可过滤大部分误用）
-    if (!pool || pool->GetBlockSize() != block_size_) {
+    if (!pool || pool->getBlockSize() != block_size_) {
         return false;
     }
 
     // 释放前记录是否处于 full（据此确定其原所在链，无需额外“位置标签”）
-    const bool was_full = pool->IsFull();
+    const bool was_full = pool->isFull();
 
     // 执行释放
-    pool->Release(ptr);
+    pool->release(ptr);
 
     // 从旧链摘除并插入新链（按照释放后的状态）
     if (was_full) {
@@ -92,12 +92,12 @@ bool SizeClassPoolManager::releaseBlock(void* ptr) noexcept {
         assert(removed == pool);
     }
 
-    if (pool->IsEmpty()) {
-        empty_.push_front(pool);
+    if (pool->isEmpty()) {
+        empty_.pusFront(pool);
         // 空闲增加后，若超高水位则回落至目标水位
         trimEmptyPools();
     } else {
-        partial_.push_front(pool);
+        partial_.pusFront(pool);
     }
 
     return true;
@@ -125,17 +125,17 @@ bool SizeClassPoolManager::ownsPointer(const void* ptr) const noexcept {
     // 简化策略：根据 2MB 对齐找到“可能的”所属子池，并校验块大小。
     // 这不能 100% 保证属于“本管理器”，但在不引入额外索引结构的前提下足够实用。
     const MemSubPool* p = ptrToOwnerPool(ptr);
-    return p && (p->GetBlockSize() == block_size_);
+    return p && (p->getBlockSize() == block_size_);
 }
 
 // ===================== 内部辅助 =====================
 
 inline bool SizeClassPoolManager::poolIsEmpty(const MemSubPool* p) noexcept {
-    return p->IsEmpty();
+    return p->isEmpty();
 }
 
 inline bool SizeClassPoolManager::poolIsFull(const MemSubPool* p) noexcept {
-    return p->IsFull();
+    return p->isFull();
 }
 
 MemSubPool* SizeClassPoolManager::ptrToOwnerPool(const void* block_ptr) noexcept {
@@ -161,7 +161,7 @@ void SizeClassPoolManager::refillEmptyPools() noexcept {
         // assert(p->IsEmpty());
         // assert(p->GetBlockSize() == block_size_);
 
-        empty_.push_front(p);
+        empty_.pusFront(p);
     }
 }
 
@@ -169,7 +169,7 @@ void SizeClassPoolManager::trimEmptyPools() noexcept {
     if (!return_cb_) return;
 
     while (empty_.size() > kHighEmptyWatermark) {
-        MemSubPool* p = empty_.pop_front();
+        MemSubPool* p = empty_.popFront();
         if (!p) break; // 理论上不会发生
         return_cb_(return_ctx_, p);
     }
@@ -179,14 +179,14 @@ void SizeClassPoolManager::trimEmptyPools() noexcept {
 
 MemSubPool* SizeClassPoolManager::acquireUsablePool() noexcept {
     if (!partial_.empty()) {
-        return partial_.pop_front();
+        return partial_.popFront();
     }
 
     if (empty_.empty()) {
         refillEmptyPools();
     }
     if (!empty_.empty()) {
-        return empty_.pop_front();
+        return empty_.popFront();
     }
 
     return nullptr;

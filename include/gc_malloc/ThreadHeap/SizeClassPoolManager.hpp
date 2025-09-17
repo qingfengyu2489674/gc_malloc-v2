@@ -11,7 +11,7 @@ class MemSubPool;
 class SizeClassPoolManager {
 public:
     static constexpr std::size_t kTargetEmptyWatermark = 2; // 目标/中间水位
-    static constexpr std::size_t kHighEmptyWatermark   = 4; // 最高水位
+    static constexpr std::size_t kHighEmptyWatermark = 4; // 最高水位
 
     using RefillCallback = MemSubPool* (*)(void* ctx) noexcept;             // 供补充空闲子池
     using ReturnCallback = void (*)(void* ctx, MemSubPool* pool) noexcept;   // 供交还空闲子池

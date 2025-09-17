@@ -12,11 +12,11 @@ TEST(ThreadHeapTest, AllocateDeallocateSmallObject) {
 
     auto* hdr = static_cast<BlockHeader*>(p);
     // 新分配的块应为 Used
-    EXPECT_EQ(hdr->load_state(), BlockState::Used);
+    EXPECT_EQ(hdr->loadState(), BlockState::Used);
 
     // 释放后应标记为 Free（跨线程安全：这里只是标位）
     ThreadHeap::deallocate(p);
-    EXPECT_EQ(hdr->load_state(), BlockState::Free);
+    EXPECT_EQ(hdr->loadState(), BlockState::Free);
 
     // 当前线程执行一次 GC，应回收这一个块
     std::size_t reclaimed = ThreadHeap::garbageCollect();
@@ -36,14 +36,14 @@ TEST(ThreadHeapTest, MultipleSmallAllocations) {
     auto* h1 = static_cast<BlockHeader*>(p1);
     auto* h2 = static_cast<BlockHeader*>(p2);
 
-    EXPECT_EQ(h1->load_state(), BlockState::Used);
-    EXPECT_EQ(h2->load_state(), BlockState::Used);
+    EXPECT_EQ(h1->loadState(), BlockState::Used);
+    EXPECT_EQ(h2->loadState(), BlockState::Used);
 
     ThreadHeap::deallocate(p2);
     ThreadHeap::deallocate(p1);
 
-    EXPECT_EQ(h1->load_state(), BlockState::Free);
-    EXPECT_EQ(h2->load_state(), BlockState::Free);
+    EXPECT_EQ(h1->loadState(), BlockState::Free);
+    EXPECT_EQ(h2->loadState(), BlockState::Free);
 
     std::size_t reclaimed = ThreadHeap::garbageCollect();
     EXPECT_EQ(reclaimed, 2u);

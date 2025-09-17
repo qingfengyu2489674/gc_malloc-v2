@@ -34,8 +34,8 @@ CentralHeap& CentralHeap::GetInstance() {
 CentralHeap::CentralHeap() {
     // 使用 placement new 在预留的静态内存上构造组件。
     // 这不会调用全局 malloc/new。
-    pChunkAllocatorFromKernel = new (&g_kernel_allocator_buffer) AlignedChunkAllocatorByMmap();
-    pFreeChunkCache = new (&g_chunk_cache_buffer) FreeChunkListCache();
+    ChunkAllocatorFromKernel_ptr = new (&g_kernel_allocator_buffer) AlignedChunkAllocatorByMmap();
+    FreeChunkCache_ptr = new (&g_chunk_cache_buffer) FreeChunkListCache();
 }
 
 
@@ -43,11 +43,11 @@ CentralHeap::CentralHeap() {
 CentralHeap::~CentralHeap() {
     // 必须手动、显式地调用【派生类】的析构函数。
     // 我们使用 static_cast，因为我们确切地知道指针背后的真实对象类型。
-    if (pFreeChunkCache) {
-        static_cast<FreeChunkListCache*>(pFreeChunkCache)->~FreeChunkListCache();
+    if (FreeChunkCache_ptr) {
+        static_cast<FreeChunkListCache*>(FreeChunkCache_ptr)->~FreeChunkListCache();
     }
-    if (pChunkAllocatorFromKernel) {
-        static_cast<AlignedChunkAllocatorByMmap*>(pChunkAllocatorFromKernel)->~AlignedChunkAllocatorByMmap();
+    if (ChunkAllocatorFromKernel_ptr) {
+        static_cast<AlignedChunkAllocatorByMmap*>(ChunkAllocatorFromKernel_ptr)->~AlignedChunkAllocatorByMmap();
     }
 }
 
@@ -56,21 +56,21 @@ CentralHeap::~CentralHeap() {
 // 3. CentralHeap 的核心逻辑实现
 // -----------------------------------------------------------------------------
 
-void* CentralHeap::AcquireChunk(size_t size) {
+void* CentralHeap::acquireChunk(size_t size) {
     assert(size == kChunkSize);
 
-    void* chunk = pFreeChunkCache->acquire();
+    void* chunk = FreeChunkCache_ptr->acquire();
     if(chunk != nullptr) { 
         return chunk;
     }
 
-    bool refill_ok  = RefillCache();
+    bool refill_ok  = refillCache();
     if(!refill_ok ) {
         std::cerr << "[CentralHeap::AcquireChunk] WARNING: Failed to refill cache. "
             << "System might be out of memory." << std::endl;
     }
 
-    chunk = pFreeChunkCache->acquire();
+    chunk = FreeChunkCache_ptr->acquire();
     if(chunk != nullptr) { 
         return chunk;
     }
@@ -78,28 +78,28 @@ void* CentralHeap::AcquireChunk(size_t size) {
     return nullptr;
 }
 
-bool CentralHeap::RefillCache() {
-    if (pFreeChunkCache->get_cache_count() > 0) {
+bool CentralHeap::refillCache() {
+    if (FreeChunkCache_ptr->getCacheCount() > 0) {
         return true;
     }
 
-    while(pFreeChunkCache->get_cache_count() <= CentralHeap::kTargetWatermarkInChunks) {
-        void* chunk = pChunkAllocatorFromKernel->allocate(kChunkSize);
+    while(FreeChunkCache_ptr->getCacheCount() <= CentralHeap::kTargetWatermarkInChunks) {
+        void* chunk = ChunkAllocatorFromKernel_ptr->allocate(kChunkSize);
         if(!chunk)
             return false;
-        pFreeChunkCache->deposit(chunk);
+        FreeChunkCache_ptr->deposit(chunk);
     }
 
     return true;
 }
 
-void CentralHeap::ReleaseChunk(void* chunk, size_t size) {
+void CentralHeap::releaseChunk(void* chunk, size_t size) {
     assert(size == kChunkSize);
 
-    if(pFreeChunkCache->get_cache_count() < kMaxWatermarkInChunks) {
-        pFreeChunkCache->deposit(chunk);
+    if(FreeChunkCache_ptr->getCacheCount() < kMaxWatermarkInChunks) {
+        FreeChunkCache_ptr->deposit(chunk);
     } else {
-        pChunkAllocatorFromKernel->deallocate(chunk, kChunkSize);
+        ChunkAllocatorFromKernel_ptr->deallocate(chunk, kChunkSize);
     }
 }
 

@@ -27,7 +27,7 @@ protected:
 
 // 测试1：初始状态，保持不变
 TEST_F(FreeChunkListCacheTest, InitialStateIsEmpty) {
-    ASSERT_EQ(cache->get_cache_count(), 0);
+    ASSERT_EQ(cache->getCacheCount(), 0);
     ASSERT_EQ(cache->acquire(), nullptr);
 }
 
@@ -39,11 +39,11 @@ TEST_F(FreeChunkListCacheTest, DepositAndAcquireSingleChunk) {
     void* ptr = &dummy_chunk;
 
     cache->deposit(ptr);
-    ASSERT_EQ(cache->get_cache_count(), 1);
+    ASSERT_EQ(cache->getCacheCount(), 1);
 
     void* acquired_ptr = cache->acquire();
     ASSERT_EQ(acquired_ptr, ptr);
-    ASSERT_EQ(cache->get_cache_count(), 0);
+    ASSERT_EQ(cache->getCacheCount(), 0);
     ASSERT_EQ(cache->acquire(), nullptr);
 }
 
@@ -58,16 +58,16 @@ TEST_F(FreeChunkListCacheTest, LIFO_OrderIsCorrect) {
     cache->deposit(ptr1);
     cache->deposit(ptr2);
 
-    ASSERT_EQ(cache->get_cache_count(), 2);
+    ASSERT_EQ(cache->getCacheCount(), 2);
     ASSERT_EQ(cache->acquire(), ptr2);
     ASSERT_EQ(cache->acquire(), ptr1);
-    ASSERT_EQ(cache->get_cache_count(), 0);
+    ASSERT_EQ(cache->getCacheCount(), 0);
 }
 
 // 测试4：存入 nullptr，保持不变
 TEST_F(FreeChunkListCacheTest, DepositNullptrIsIgnored) {
     cache->deposit(nullptr);
-    ASSERT_EQ(cache->get_cache_count(), 0);
+    ASSERT_EQ(cache->getCacheCount(), 0);
 }
 
 
@@ -104,6 +104,6 @@ TEST_F(FreeChunkListCacheTest, IsThreadSafeUnderConcurrentAccess) {
     producer.join();
     consumer.join();
 
-    ASSERT_EQ(cache->get_cache_count(), 0);
+    ASSERT_EQ(cache->getCacheCount(), 0);
     ASSERT_EQ(acquired_chunks.size(), num_items);
 }

@@ -30,7 +30,7 @@ public:
     ThreadHeap& operator=(ThreadHeap&&)      = delete;
 
 private:
-    static ThreadHeap& local_() noexcept;
+    static ThreadHeap& local() noexcept;
 
     ThreadHeap() noexcept;
     ~ThreadHeap();
@@ -38,12 +38,12 @@ private:
     static std::size_t sizeToClass_(std::size_t nbytes) noexcept;
 
     // ---- 与 SizeClassPoolManager 的回调桥 ----
-    static MemSubPool* refillFromCentral_Cb_(void* ctx) noexcept;                 // 获取新子池
-    static void        returnToCentral_Cb_(void* ctx, MemSubPool* p) noexcept; // 归还空子池
+    static MemSubPool* refillFromCentral_cb(void* ctx) noexcept;                 // 获取新子池
+    static void        returnToCentral_cb(void* ctx, MemSubPool* p) noexcept; // 归还空子池
 
     // ---- 小工具 ----
-    void        attachInUse_(BlockHeader* blk) noexcept;
-    std::size_t reclaimBatch_(std::size_t max_scan) noexcept;
+    void        attachUsed(BlockHeader* blk) noexcept;
+    std::size_t reclaimBatch(std::size_t max_scan) noexcept;
 
 private:
     // 编译期常量（来自 SizeClassConfig.hpp，必须是 constexpr）

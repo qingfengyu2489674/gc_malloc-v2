@@ -8,45 +8,38 @@
 #include "gc_malloc/ThreadHeap/MemSubPool.hpp"
 #include "gc_malloc/ThreadHeap/ThreadHeap.hpp"
 
-// --------------- 对外公共接口 ---------------
+// -------------------- 对外公共接口 --------------------
 
 void* ThreadHeap::allocate(std::size_t nbytes) noexcept {
-    ThreadHeap& th = local_();
+    ThreadHeap& th = local();
 
-    // 大对象：直接走 CentralHeap
+    // 大对象：直接走 CentralHeap（整块 chunk）
     if (nbytes > SizeClassConfig::kMaxSmallAlloc) {
-        // 注意：CentralHeap::kChunkSize 是私有的，改用 SizeClassConfig::kChunkSizeBytes
-        void* raw = CentralHeap::GetInstance().AcquireChunk(SizeClassConfig::kChunkSizeBytes);
-        return raw;
+        return CentralHeap::GetInstance().acquireChunk(SizeClassConfig::kChunkSizeBytes);
     }
 
-    // 小对象：映射到 size-class，向该 class 的池子分配
+    // 小对象：映射到 size-class
     const std::size_t class_idx = sizeToClass_(nbytes);
-    void* block_ptr = at(th.managers_storage_[class_idx]).allocateBlock();  // ★ 修正：使用 at(...)
+    void* block_ptr = at(th.managers_storage_[class_idx]).allocateBlock();
     if (!block_ptr) return nullptr;
 
-    // 将块挂入托管链表（进入托管即标记为 Used）
     auto* hdr = static_cast<BlockHeader*>(block_ptr);
-    th.attachInUse_(hdr);
+    th.attachUsed(hdr);
     return block_ptr;
 }
 
 void ThreadHeap::deallocate(void* ptr) noexcept {
     if (!ptr) return;
-
-    // 跨线程释放：仅写块头状态为 Free，真正回收由拥有该块的线程在 GC 中处理
-    auto* hdr = static_cast<BlockHeader*>(ptr);
-    hdr->store_free();
+    static_cast<BlockHeader*>(ptr)->storeFree();  // 跨线程释放只改状态
 }
 
-std::size_t ThreadHeap::garbageCollect(std::size_t max_reclaim) noexcept {
-    ThreadHeap& th = local_();
-    return th.reclaimBatch_(max_reclaim);
+std::size_t ThreadHeap::garbageCollect(std::size_t max_scan) noexcept {
+    return local().reclaimBatch(max_scan);
 }
 
-// --------------- 内部实现（TLS / 构造 / 回调桥等） ---------------
+// -------------------- 内部实现（TLS / 构造 / 回调桥） --------------------
 
-ThreadHeap& ThreadHeap::local_() noexcept {
+ThreadHeap& ThreadHeap::local() noexcept {
     static thread_local ThreadHeap tls_instance;
     return tls_instance;
 }
@@ -55,18 +48,17 @@ ThreadHeap::ThreadHeap() noexcept {
     for (std::size_t i = 0; i < k_class_count; ++i) {
         const std::size_t bs = SizeClassConfig::ClassToSize(i);
         void* slot = static_cast<void*>(&managers_storage_[i]);
-        new (slot) SizeClassPoolManager(bs);  // ★ placement-new
+        new (slot) SizeClassPoolManager(bs);
 
-        // 如果需要设置回调：ctx 必须能在回调里恢复出 SizeClassPoolManager&
-        // 这里将 ctx 传递为 ManagerStorage*，回调中用 at(*ptr) 还原引用
-        at(managers_storage_[i]).setRefillCallback(&ThreadHeap::refillFromCentral_Cb_, /*ctx=*/&managers_storage_[i]);
-        at(managers_storage_[i]).setReturnCallback(&ThreadHeap::returnToCentral_Cb_, /*ctx=*/&managers_storage_[i]);
+        // 回调 ctx 传回自身存储地址，回调里用 at(*ptr) 还原引用
+        at(managers_storage_[i]).setRefillCallback(&ThreadHeap::refillFromCentral_cb, /*ctx=*/&managers_storage_[i]);
+        at(managers_storage_[i]).setReturnCallback(&ThreadHeap::returnToCentral_cb,   /*ctx=*/&managers_storage_[i]);
     }
 }
 
 ThreadHeap::~ThreadHeap() {
-    for (std::size_t i = 0; i < k_class_count; ++i) {                  // ★ 修正：kClassCount
-        at(managers_storage_[i]).~SizeClassPoolManager();            // ★ 修正：显式析构，走 at(...)
+    for (std::size_t i = 0; i < k_class_count; ++i) {
+        at(managers_storage_[i]).~SizeClassPoolManager();
     }
 }
 
@@ -76,58 +68,51 @@ std::size_t ThreadHeap::sizeToClass_(std::size_t nbytes) noexcept {
 
 // ---- 与 SizeClassPoolManager 的回调桥 ----
 
-MemSubPool* ThreadHeap::refillFromCentral_Cb_(void* ctx) noexcept {
-    // ctx 是传进来的 ManagerStorage*，需要还原出 SizeClassPoolManager&
+MemSubPool* ThreadHeap::refillFromCentral_cb(void* ctx) noexcept {
     auto* storage_ptr = static_cast<ManagerStorage*>(ctx);
     SizeClassPoolManager& mgr = at(*storage_ptr);
-    const std::size_t bs = mgr.getBlockSize();
+    const std::size_t block_size = mgr.getBlockSize();
 
-    // 同上，不能用 CentralHeap::kChunkSize（它是私有的）
-    void* raw = CentralHeap::GetInstance().AcquireChunk(SizeClassConfig::kChunkSizeBytes);
+    void* raw = CentralHeap::GetInstance().acquireChunk(SizeClassConfig::kChunkSizeBytes);
     if (!raw) return nullptr;
 
-    return new (raw) MemSubPool(bs);
+    return new (raw) MemSubPool(block_size);
 }
 
-void ThreadHeap::returnToCentral_Cb_(void* ctx, MemSubPool* p) noexcept {
-    (void)ctx; // 当前未使用
+void ThreadHeap::returnToCentral_cb(void* /*ctx*/, MemSubPool* p) noexcept {
     if (!p) return;
-
-    // 析构子池，然后把整块 chunk 归还给 CentralHeap
     p->~MemSubPool();
-    CentralHeap::GetInstance().ReleaseChunk(static_cast<void*>(p), SizeClassConfig::kChunkSizeBytes);
+    CentralHeap::GetInstance().releaseChunk(static_cast<void*>(p), SizeClassConfig::kChunkSizeBytes);
 }
 
-// ---- 小工具：托管链表封装 ----
+// -------------------- 小工具 --------------------
 
-void ThreadHeap::attachInUse_(BlockHeader* blk) noexcept {
+void ThreadHeap::attachUsed(BlockHeader* blk) noexcept {
     if (!blk) return;
-    managed_list_.attach_used(blk);
+    managed_list_.appendUsed(blk);
 }
 
-std::size_t ThreadHeap::reclaimBatch_(std::size_t max_reclaim) noexcept {
+std::size_t ThreadHeap::reclaimBatch(std::size_t max_scan) noexcept {
     std::size_t reclaimed = 0;
     std::size_t scanned   = 0;
 
-    managed_list_.reset_cursor();
+    managed_list_.resetCursor();
 
-    while (scanned < max_reclaim) {
-        BlockHeader* freed = managed_list_.reclaim_next();
-        if (!freed) break; // 本轮没有可回收的块了
-
+    while (scanned < max_scan) {
+        BlockHeader* freed = managed_list_.reclaimNextFree();
+        if (!freed) break;
         ++scanned;
 
         void* user_ptr = static_cast<void*>(freed);
 
-        // 线性探测归还（简单但正确；后续可优化成指针→子池的快速定位）
         bool released = false;
-        for (std::size_t i = 0; i < k_class_count; ++i) {                         // ★ 修正：kClassCount
-            if (at(managers_storage_[i]).releaseBlock(user_ptr)) {              // ★ 修正：使用 at(...)
+        for (std::size_t i = 0; i < k_class_count; ++i) {
+            if (at(managers_storage_[i]).releaseBlock(user_ptr)) {
                 released = true;
                 break;
             }
         }
-        assert(released && "ReclaimOnce_: block did not belong to any SizeClassPoolManager!");
+        assert(released && "reclaimBatch: block not owned by any SizeClassPoolManager");
 
         if (released) ++reclaimed;
     }

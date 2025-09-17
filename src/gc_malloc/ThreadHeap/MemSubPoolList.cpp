@@ -7,7 +7,7 @@
 
 // 内部小工具：重置节点的侵入式指针
 namespace {
-inline void reset_links_(MemSubPool* node) noexcept {
+inline void resetLinks(MemSubPool* node) noexcept {
     if (!node) return;
     node->list_prev = nullptr;
     node->list_next = nullptr;
@@ -34,7 +34,7 @@ MemSubPool* MemSubPoolList::front() const noexcept {
 }
 
 // ===== 修改操作 =====
-void MemSubPoolList::push_front(MemSubPool* node) noexcept {
+void MemSubPoolList::pusFront(MemSubPool* node) noexcept {
     assert(node && "push_front: node 不能为 nullptr");
     // 要求：节点当前未在任一链表中（调用方应保证）
     assert(node->list_prev == nullptr && node->list_next == nullptr);
@@ -53,7 +53,7 @@ void MemSubPoolList::push_front(MemSubPool* node) noexcept {
     ++size_;
 }
 
-MemSubPool* MemSubPoolList::pop_front() noexcept {
+MemSubPool* MemSubPoolList::popFront() noexcept {
     if (empty()) return nullptr;
 
     MemSubPool* old = head_;
@@ -66,7 +66,7 @@ MemSubPool* MemSubPoolList::pop_front() noexcept {
         tail_ = nullptr;
     }
 
-    reset_links_(old);
+    resetLinks(old);
     --size_;
     return old;
 }
@@ -98,7 +98,7 @@ MemSubPool* MemSubPoolList::remove(MemSubPool* node) noexcept {
         n->list_prev = p;
     }
 
-    reset_links_(node);
+    resetLinks(node);
     assert(size_ > 0);
     --size_;
     return node;

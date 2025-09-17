@@ -11,7 +11,7 @@ namespace {
     }
 }
 
-size_t MemSubPool::CalculateDataOffset() {
+size_t MemSubPool::calculateDataOffset() {
     const size_t start_of_data_area =
         offsetof(MemSubPool, bitmap_) + sizeof(Bitmap);
         
@@ -21,7 +21,7 @@ size_t MemSubPool::CalculateDataOffset() {
     );
 }
 
-size_t MemSubPool::CalculateTotalBlockCount(size_t block_size, size_t data_offset) {
+size_t MemSubPool::calculateTotalBlockCount(size_t block_size, size_t data_offset) {
     const size_t data_area_size = MemSubPool::kPoolTotalSize - data_offset;
     return data_area_size / block_size;
 }
@@ -31,8 +31,8 @@ MemSubPool::MemSubPool(size_t block_size):
     magic_(kPoolMagic),
     lock_(),
     block_size_(block_size),
-    data_offset_(CalculateDataOffset()),
-    total_block_count_(CalculateTotalBlockCount(block_size, data_offset_)),
+    data_offset_(calculateDataOffset()),
+    total_block_count_(calculateTotalBlockCount(block_size, data_offset_)),
     used_block_count_(0),
     next_free_block_hint_(0),
     bitmap_buffer_{0},
@@ -51,7 +51,7 @@ MemSubPool::~MemSubPool() {
 
 // --- 公共接口实现 ---
 
-void* MemSubPool::Allocate() {
+void* MemSubPool::allocate() {
     std::lock_guard<std::mutex> guard(lock_);
 
     // 如果已知池已满，可以直接返回。
@@ -60,14 +60,14 @@ void* MemSubPool::Allocate() {
     }
 
 
-    size_t free_block_index = bitmap_.FindFirstFree(next_free_block_hint_);
+    size_t free_block_index = bitmap_.findFirstFree(next_free_block_hint_);
     
-    if (free_block_index == Bitmap::kNotFound && next_free_block_hint_ > 0) {
-        free_block_index = bitmap_.FindFirstFree(0);
+    if (free_block_index == Bitmap::k_not_found && next_free_block_hint_ > 0) {
+        free_block_index = bitmap_.findFirstFree(0);
     }
 
-    if (free_block_index != Bitmap::kNotFound) {
-        bitmap_.MarkAsUsed(free_block_index);
+    if (free_block_index != Bitmap::k_not_found) {
+        bitmap_.markAsUsed(free_block_index);
 
         used_block_count_.fetch_add(1, std::memory_order_relaxed);
         
@@ -83,7 +83,7 @@ void* MemSubPool::Allocate() {
 }
 
 
-void MemSubPool::Release(void* block_ptr) {
+void MemSubPool::release(void* block_ptr) {
     if (block_ptr == nullptr) {
         return;
     }
@@ -111,27 +111,27 @@ void MemSubPool::Release(void* block_ptr) {
     const size_t block_index = offset / block_size_;
     
     // 检查位图中对应的位是否已经是“空闲”，如果是，则为重复释放错误。
-    if (!bitmap_.IsUsed(block_index)) {
+    if (!bitmap_.isUsed(block_index)) {
         fprintf(stderr, "Error: Double-free detected on block index %zu.\n", block_index);
         return;
     }
 
-    bitmap_.MarkAsFree(block_index);
+    bitmap_.markAsFree(block_index);
     used_block_count_.fetch_sub(1, std::memory_order_relaxed);
 
 }
 
 
-bool MemSubPool::IsFull() const {
+bool MemSubPool::isFull() const {
     return used_block_count_.load(std::memory_order_relaxed) >= total_block_count_;
 }
 
 
-bool MemSubPool::IsEmpty() const {
+bool MemSubPool::isEmpty() const {
     return used_block_count_.load(std::memory_order_relaxed) == 0;
 }
 
 
-size_t MemSubPool::GetBlockSize() const {
+size_t MemSubPool::getBlockSize() const {
     return block_size_;
 }

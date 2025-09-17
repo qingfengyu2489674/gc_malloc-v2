@@ -31,13 +31,13 @@ TEST_F(CentralHeapTest, FirstAcquirePopulatesCacheAndSucceeds) {
 
     // 在第一次分配前，我们无法轻易知道缓存状态，但可以假设它接近初始状态
     
-    void* chunk = heap.AcquireChunk(kChunkSize);
+    void* chunk = heap.acquireChunk(kChunkSize);
 
     // 断言我们成功获取了一个非空的内存块
     ASSERT_NE(chunk, nullptr);
     
     // 释放这个块，以便其他测试可以重用
-    heap.ReleaseChunk(chunk, kChunkSize);
+    heap.releaseChunk(chunk, kChunkSize);
 }
 
 // 测试3：验证缓存耗尽后能再次填充
@@ -47,19 +47,19 @@ TEST_F(CentralHeapTest, CacheRefillsAfterDepletion) {
 
     // 首先，取走目标水位线数量的块，这应该会耗尽初始填充的缓存
     for (size_t i = 0; i < kTargetWatermarkInChunks; ++i) {
-        void* chunk = heap.AcquireChunk(kChunkSize);
+        void* chunk = heap.acquireChunk(kChunkSize);
         ASSERT_NE(chunk, nullptr) << "Failed to acquire chunk #" << i;
         chunks.push_back(chunk);
     }
     
     // 再取一个，这应该会触发第二次 refill
-    void* extra_chunk = heap.AcquireChunk(kChunkSize);
+    void* extra_chunk = heap.acquireChunk(kChunkSize);
     ASSERT_NE(extra_chunk, nullptr) << "Failed to acquire chunk after depleting cache.";
     chunks.push_back(extra_chunk);
 
     // 将所有获取的块都释放回缓存
     for (void* chunk : chunks) {
-        heap.ReleaseChunk(chunk, kChunkSize);
+        heap.releaseChunk(chunk, kChunkSize);
     }
 }
 
@@ -72,7 +72,7 @@ TEST_F(CentralHeapTest, ReleaseStopsAtHighWatermark) {
     const size_t num_to_test = kMaxWatermarkInChunks + 5;
     for (size_t i = 0; i < num_to_test; ++i) {
         // 我们需要先从系统获取这些块
-        void* chunk = heap.AcquireChunk(kChunkSize);
+        void* chunk = heap.acquireChunk(kChunkSize);
         // 如果系统内存不足，测试无法进行
         if (chunk == nullptr) {
             GTEST_SKIP() << "System out of memory, cannot perform high watermark test.";
@@ -82,7 +82,7 @@ TEST_F(CentralHeapTest, ReleaseStopsAtHighWatermark) {
 
     // 现在，将所有这些块释放回中心堆
     for (void* chunk : chunks) {
-        heap.ReleaseChunk(chunk, kChunkSize);
+        heap.releaseChunk(chunk, kChunkSize);
     }
 
     // 我们无法直接访问缓存数量，这是一个设计上的限制。
@@ -93,13 +93,13 @@ TEST_F(CentralHeapTest, ReleaseStopsAtHighWatermark) {
     
     std::vector<void*> acquired_chunks;
     for (size_t i = 0; i < kMaxWatermarkInChunks + 1; ++i) {
-        void* chunk = heap.AcquireChunk(kChunkSize);
+        void* chunk = heap.acquireChunk(kChunkSize);
         ASSERT_NE(chunk, nullptr) << "Failed to acquire chunk #" << i << " during watermark check.";
         acquired_chunks.push_back(chunk);
     }
 
     // 清理
     for (void* chunk : acquired_chunks) {
-        heap.ReleaseChunk(chunk, kChunkSize);
+        heap.releaseChunk(chunk, kChunkSize);
     }
 }
