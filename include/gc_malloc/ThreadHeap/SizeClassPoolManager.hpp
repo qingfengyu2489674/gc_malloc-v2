@@ -25,29 +25,29 @@ public:
     SizeClassPoolManager(SizeClassPoolManager&&)                 = delete;
     SizeClassPoolManager& operator=(SizeClassPoolManager&&)      = delete;
 
-    void SetRefillCallback(RefillCallback cb, void* ctx) noexcept;
-    void SetReturnCallback(ReturnCallback cb, void* ctx) noexcept;
+    void setRefillCallback(RefillCallback cb, void* ctx) noexcept;
+    void setReturnCallback(ReturnCallback cb, void* ctx) noexcept;
 
-    void* AllocateBlock() noexcept;
-    bool  ReleaseBlock(void* ptr) noexcept;
+    void* allocateBlock() noexcept;
+    bool  releaseBlock(void* ptr) noexcept;
 
-    std::size_t GetBlockSize()        const noexcept;
-    std::size_t GetPoolCountEmpty()   const noexcept;
-    std::size_t GetPoolCountPartial() const noexcept;
-    std::size_t GetPoolCountFull()    const noexcept;
+    std::size_t getBlockSize()        const noexcept;
+    std::size_t getPoolCountEmpty()   const noexcept;
+    std::size_t getPoolCountPartial() const noexcept;
+    std::size_t getPoolCountFull()    const noexcept;
 
-    bool OwnsPointer(const void* ptr) const noexcept;
+    bool ownsPointer(const void* ptr) const noexcept;
 
 private:
-    static inline bool PoolIsEmpty_(const MemSubPool* p) noexcept;
-    static inline bool PoolIsFull_ (const MemSubPool* p) noexcept;
+    static inline bool poolIsEmpty(const MemSubPool* p) noexcept;
+    static inline bool poolIsFull (const MemSubPool* p) noexcept;
 
-    static MemSubPool* PtrToOwnerPool_(const void* block_ptr) noexcept;
+    static MemSubPool* ptrToOwnerPool(const void* block_ptr) noexcept;
 
-    void RefillEmptyPools_() noexcept; // empty 为空则补齐到 kTargetEmptyWatermark
-    void TrimEmptyPools_() noexcept;   // empty 超过最高水位则回落到目标水位
+    void refillEmptyPools() noexcept; // empty 为空则补齐到 kTargetEmptyWatermark
+    void trimEmptyPools() noexcept;   // empty 超过最高水位则回落到目标水位
 
-    MemSubPool* AcquireUsablePool_() noexcept;
+    MemSubPool* acquireUsablePool() noexcept;
 
 private:
     const std::size_t block_size_;

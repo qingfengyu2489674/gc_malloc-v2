@@ -73,9 +73,9 @@ static void TestReturnCallback(void* ctx, MemSubPool* pool) noexcept {
 }
 
 // 小工具：查看三条链规模（仅用于断言）
-static std::size_t EmptyCount(SizeClassPoolManager& mgr)   { return mgr.GetPoolCountEmpty();   }
-static std::size_t PartialCount(SizeClassPoolManager& mgr) { return mgr.GetPoolCountPartial(); }
-static std::size_t FullCount(SizeClassPoolManager& mgr)    { return mgr.GetPoolCountFull();    }
+static std::size_t EmptyCount(SizeClassPoolManager& mgr)   { return mgr.getPoolCountEmpty();   }
+static std::size_t PartialCount(SizeClassPoolManager& mgr) { return mgr.getPoolCountPartial(); }
+static std::size_t FullCount(SizeClassPoolManager& mgr)    { return mgr.getPoolCountFull();    }
 
 // ============== 测试 1：按需补水 + 基本分配/释放 ==============
 // 期望：第一次分配时触发补水（empty 从 0 补到 target），分配后 pool 入 partial；
@@ -86,15 +86,15 @@ TEST(SizeClassPoolManager, RefillOnDemand_Allocate_Release) {
 
     {
         SizeClassPoolManager mgr{ctx.block_size};
-        mgr.SetRefillCallback(&TestRefillCallback, &ctx);
-        mgr.SetReturnCallback(&TestReturnCallback, &ctx);
+        mgr.setRefillCallback(&TestRefillCallback, &ctx);
+        mgr.setReturnCallback(&TestReturnCallback, &ctx);
 
         EXPECT_EQ(EmptyCount(mgr),   0u);
         EXPECT_EQ(PartialCount(mgr), 0u);
         EXPECT_EQ(FullCount(mgr),    0u);
 
         // 第一次分配：应触发按需补水
-        void* p = mgr.AllocateBlock();
+        void* p = mgr.allocateBlock();
         ASSERT_NE(p, nullptr);
         EXPECT_GE(ctx.refill_calls, 1u);
 
@@ -104,7 +104,7 @@ TEST(SizeClassPoolManager, RefillOnDemand_Allocate_Release) {
         EXPECT_LE(EmptyCount(mgr), SizeClassPoolManager::kTargetEmptyWatermark);
 
         // 释放：回到 empty
-        EXPECT_TRUE(mgr.ReleaseBlock(p));
+        EXPECT_TRUE(mgr.releaseBlock(p));
         EXPECT_EQ(PartialCount(mgr), 0u);
         EXPECT_GE(EmptyCount(mgr), 1u);
     }
@@ -122,32 +122,32 @@ TEST(SizeClassPoolManager, MultipleAllocations_SamePool) {
 
     {
         SizeClassPoolManager mgr{ctx.block_size};
-        mgr.SetRefillCallback(&TestRefillCallback, &ctx);
-        mgr.SetReturnCallback(&TestReturnCallback, &ctx);
+        mgr.setRefillCallback(&TestRefillCallback, &ctx);
+        mgr.setReturnCallback(&TestReturnCallback, &ctx);
 
         // 第一次分配触发补水
-        void* a = mgr.AllocateBlock();
+        void* a = mgr.allocateBlock();
         ASSERT_NE(a, nullptr);
         EXPECT_EQ(PartialCount(mgr), 1u);
 
         // 再分配几个块（很大概率仍来自同一 pool）
-        void* b = mgr.AllocateBlock();
+        void* b = mgr.allocateBlock();
         ASSERT_NE(b, nullptr);
         EXPECT_EQ(PartialCount(mgr), 1u);
 
-        void* c = mgr.AllocateBlock();
+        void* c = mgr.allocateBlock();
         ASSERT_NE(c, nullptr);
         EXPECT_EQ(PartialCount(mgr), 1u);
 
         // 释放三个块：partial 仍然是 1（该 pool 部分使用）
-        EXPECT_TRUE(mgr.ReleaseBlock(b));
+        EXPECT_TRUE(mgr.releaseBlock(b));
         EXPECT_EQ(PartialCount(mgr), 1u);
 
-        EXPECT_TRUE(mgr.ReleaseBlock(c));
+        EXPECT_TRUE(mgr.releaseBlock(c));
         EXPECT_EQ(PartialCount(mgr), 1u);
 
         // 释放最后一个：该 pool 回到 empty
-        EXPECT_TRUE(mgr.ReleaseBlock(a));
+        EXPECT_TRUE(mgr.releaseBlock(a));
         EXPECT_EQ(PartialCount(mgr), 0u);
         EXPECT_GE(EmptyCount(mgr), 1u);
     }
@@ -166,19 +166,19 @@ TEST(SizeClassPoolManager, OwnsPointer_BlockSizeMismatch) {
         SizeClassPoolManager mgrA{ctxA.block_size};
         SizeClassPoolManager mgrB{ctxB.block_size};
 
-        mgrA.SetRefillCallback(&TestRefillCallback, &ctxA);
-        mgrA.SetReturnCallback(&TestReturnCallback, &ctxA);
+        mgrA.setRefillCallback(&TestRefillCallback, &ctxA);
+        mgrA.setReturnCallback(&TestReturnCallback, &ctxA);
 
-        mgrB.SetRefillCallback(&TestRefillCallback, &ctxB);
-        mgrB.SetReturnCallback(&TestReturnCallback, &ctxB);
+        mgrB.setRefillCallback(&TestRefillCallback, &ctxB);
+        mgrB.setReturnCallback(&TestReturnCallback, &ctxB);
 
-        p = mgrA.AllocateBlock();
+        p = mgrA.allocateBlock();
         ASSERT_NE(p, nullptr);
 
-        EXPECT_TRUE(mgrA.OwnsPointer(p));   // 自己应当认为“可能属于自己”
-        EXPECT_FALSE(mgrB.OwnsPointer(p));  // 块大小不同 → false
+        EXPECT_TRUE(mgrA.ownsPointer(p));   // 自己应当认为“可能属于自己”
+        EXPECT_FALSE(mgrB.ownsPointer(p));  // 块大小不同 → false
 
-        EXPECT_TRUE(mgrA.ReleaseBlock(p));
+        EXPECT_TRUE(mgrA.releaseBlock(p));
         p = nullptr;
     }
 

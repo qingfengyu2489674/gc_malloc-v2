@@ -19,12 +19,12 @@ SizeClassPoolManager::~SizeClassPoolManager()
 
 // ===================== 回调设置 =====================
 
-void SizeClassPoolManager::SetRefillCallback(RefillCallback cb, void* ctx) noexcept {
+void SizeClassPoolManager::setRefillCallback(RefillCallback cb, void* ctx) noexcept {
     refill_cb_  = cb;
     refill_ctx_ = ctx;
 }
 
-void SizeClassPoolManager::SetReturnCallback(ReturnCallback cb, void* ctx) noexcept {
+void SizeClassPoolManager::setReturnCallback(ReturnCallback cb, void* ctx) noexcept {
     return_cb_  = cb;
     return_ctx_ = ctx;
 }
@@ -33,14 +33,14 @@ void SizeClassPoolManager::SetReturnCallback(ReturnCallback cb, void* ctx) noexc
 
 // ===================== 分配 / 释放 =====================
 
-void* SizeClassPoolManager::AllocateBlock() noexcept {
+void* SizeClassPoolManager::allocateBlock() noexcept {
     // 若 partial 与 empty 都空，先尝试按水位补齐空闲
     if (partial_.empty() && empty_.empty()) {
-        RefillEmptyPools_();
+        refillEmptyPools();
     }
 
     // 选取可用子池（会从对应链表 pop 出来）
-    MemSubPool* pool = AcquireUsablePool_();
+    MemSubPool* pool = acquireUsablePool();
     if (!pool) return nullptr;
 
     void* block = pool->Allocate();
@@ -64,10 +64,10 @@ void* SizeClassPoolManager::AllocateBlock() noexcept {
     return block;
 }
 
-bool SizeClassPoolManager::ReleaseBlock(void* ptr) noexcept {
+bool SizeClassPoolManager::releaseBlock(void* ptr) noexcept {
     if (!ptr) return true;
 
-    MemSubPool* pool = PtrToOwnerPool_(ptr);
+    MemSubPool* pool = ptrToOwnerPool(ptr);
     // 简易校验：块大小是否匹配（不能完全证明属于本管理器，但可过滤大部分误用）
     if (!pool || pool->GetBlockSize() != block_size_) {
         return false;
@@ -95,7 +95,7 @@ bool SizeClassPoolManager::ReleaseBlock(void* ptr) noexcept {
     if (pool->IsEmpty()) {
         empty_.push_front(pool);
         // 空闲增加后，若超高水位则回落至目标水位
-        TrimEmptyPools_();
+        trimEmptyPools();
     } else {
         partial_.push_front(pool);
     }
@@ -105,40 +105,40 @@ bool SizeClassPoolManager::ReleaseBlock(void* ptr) noexcept {
 
 // ===================== 统计 / 查询 =====================
 
-std::size_t SizeClassPoolManager::GetBlockSize() const noexcept {
+std::size_t SizeClassPoolManager::getBlockSize() const noexcept {
     return block_size_;
 }
 
-std::size_t SizeClassPoolManager::GetPoolCountEmpty() const noexcept {
+std::size_t SizeClassPoolManager::getPoolCountEmpty() const noexcept {
     return empty_.size();
 }
 
-std::size_t SizeClassPoolManager::GetPoolCountPartial() const noexcept {
+std::size_t SizeClassPoolManager::getPoolCountPartial() const noexcept {
     return partial_.size();
 }
 
-std::size_t SizeClassPoolManager::GetPoolCountFull() const noexcept {
+std::size_t SizeClassPoolManager::getPoolCountFull() const noexcept {
     return full_.size();
 }
 
-bool SizeClassPoolManager::OwnsPointer(const void* ptr) const noexcept {
+bool SizeClassPoolManager::ownsPointer(const void* ptr) const noexcept {
     // 简化策略：根据 2MB 对齐找到“可能的”所属子池，并校验块大小。
     // 这不能 100% 保证属于“本管理器”，但在不引入额外索引结构的前提下足够实用。
-    const MemSubPool* p = PtrToOwnerPool_(ptr);
+    const MemSubPool* p = ptrToOwnerPool(ptr);
     return p && (p->GetBlockSize() == block_size_);
 }
 
 // ===================== 内部辅助 =====================
 
-inline bool SizeClassPoolManager::PoolIsEmpty_(const MemSubPool* p) noexcept {
+inline bool SizeClassPoolManager::poolIsEmpty(const MemSubPool* p) noexcept {
     return p->IsEmpty();
 }
 
-inline bool SizeClassPoolManager::PoolIsFull_(const MemSubPool* p) noexcept {
+inline bool SizeClassPoolManager::poolIsFull(const MemSubPool* p) noexcept {
     return p->IsFull();
 }
 
-MemSubPool* SizeClassPoolManager::PtrToOwnerPool_(const void* block_ptr) noexcept {
+MemSubPool* SizeClassPoolManager::ptrToOwnerPool(const void* block_ptr) noexcept {
     if (!block_ptr) return nullptr;
     auto addr = reinterpret_cast<std::uintptr_t>(block_ptr);
     const std::uintptr_t mask = static_cast<std::uintptr_t>(MemSubPool::kPoolTotalSize) - 1;
@@ -148,7 +148,7 @@ MemSubPool* SizeClassPoolManager::PtrToOwnerPool_(const void* block_ptr) noexcep
 
 // —— 水位控制 ——
 
-void SizeClassPoolManager::RefillEmptyPools_() noexcept {
+void SizeClassPoolManager::refillEmptyPools() noexcept {
     if (!empty_.empty()) return;
     if (!refill_cb_)     return;
 
@@ -165,7 +165,7 @@ void SizeClassPoolManager::RefillEmptyPools_() noexcept {
     }
 }
 
-void SizeClassPoolManager::TrimEmptyPools_() noexcept {
+void SizeClassPoolManager::trimEmptyPools() noexcept {
     if (!return_cb_) return;
 
     while (empty_.size() > kHighEmptyWatermark) {
@@ -177,13 +177,13 @@ void SizeClassPoolManager::TrimEmptyPools_() noexcept {
 
 // —— 选择可用子池 ——
 
-MemSubPool* SizeClassPoolManager::AcquireUsablePool_() noexcept {
+MemSubPool* SizeClassPoolManager::acquireUsablePool() noexcept {
     if (!partial_.empty()) {
         return partial_.pop_front();
     }
 
     if (empty_.empty()) {
-        RefillEmptyPools_();
+        refillEmptyPools();
     }
     if (!empty_.empty()) {
         return empty_.pop_front();

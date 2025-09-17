@@ -10,8 +10,8 @@
 
 // --------------- 对外公共接口 ---------------
 
-void* ThreadHeap::Allocate(std::size_t nbytes) noexcept {
-    ThreadHeap& th = Local_();
+void* ThreadHeap::allocate(std::size_t nbytes) noexcept {
+    ThreadHeap& th = local_();
 
     // 大对象：直接走 CentralHeap
     if (nbytes > SizeClassConfig::kMaxSmallAlloc) {
@@ -21,17 +21,17 @@ void* ThreadHeap::Allocate(std::size_t nbytes) noexcept {
     }
 
     // 小对象：映射到 size-class，向该 class 的池子分配
-    const std::size_t class_idx = SizeToClass_(nbytes);
-    void* block_ptr = at(th.managers_storage_[class_idx]).AllocateBlock();  // ★ 修正：使用 at(...)
+    const std::size_t class_idx = sizeToClass_(nbytes);
+    void* block_ptr = at(th.managers_storage_[class_idx]).allocateBlock();  // ★ 修正：使用 at(...)
     if (!block_ptr) return nullptr;
 
     // 将块挂入托管链表（进入托管即标记为 Used）
     auto* hdr = static_cast<BlockHeader*>(block_ptr);
-    th.AttachUsed_(hdr);
+    th.attachInUse_(hdr);
     return block_ptr;
 }
 
-void ThreadHeap::Deallocate(void* ptr) noexcept {
+void ThreadHeap::deallocate(void* ptr) noexcept {
     if (!ptr) return;
 
     // 跨线程释放：仅写块头状态为 Free，真正回收由拥有该块的线程在 GC 中处理
@@ -39,48 +39,48 @@ void ThreadHeap::Deallocate(void* ptr) noexcept {
     hdr->store_free();
 }
 
-std::size_t ThreadHeap::GarbageCollect(std::size_t max_reclaim) noexcept {
-    ThreadHeap& th = Local_();
-    return th.ReclaimOnce_(max_reclaim);
+std::size_t ThreadHeap::garbageCollect(std::size_t max_reclaim) noexcept {
+    ThreadHeap& th = local_();
+    return th.reclaimBatch_(max_reclaim);
 }
 
 // --------------- 内部实现（TLS / 构造 / 回调桥等） ---------------
 
-ThreadHeap& ThreadHeap::Local_() noexcept {
+ThreadHeap& ThreadHeap::local_() noexcept {
     static thread_local ThreadHeap tls_instance;
     return tls_instance;
 }
 
 ThreadHeap::ThreadHeap() noexcept {
-    for (std::size_t i = 0; i < kClassCount; ++i) {
+    for (std::size_t i = 0; i < k_class_count; ++i) {
         const std::size_t bs = SizeClassConfig::ClassToSize(i);
         void* slot = static_cast<void*>(&managers_storage_[i]);
         new (slot) SizeClassPoolManager(bs);  // ★ placement-new
 
         // 如果需要设置回调：ctx 必须能在回调里恢复出 SizeClassPoolManager&
         // 这里将 ctx 传递为 ManagerStorage*，回调中用 at(*ptr) 还原引用
-        at(managers_storage_[i]).SetRefillCallback(&ThreadHeap::RefillFromMgrCb_, /*ctx=*/&managers_storage_[i]);
-        at(managers_storage_[i]).SetReturnCallback(&ThreadHeap::ReturnToCentralCb_, /*ctx=*/&managers_storage_[i]);
+        at(managers_storage_[i]).setRefillCallback(&ThreadHeap::refillFromCentral_Cb_, /*ctx=*/&managers_storage_[i]);
+        at(managers_storage_[i]).setReturnCallback(&ThreadHeap::returnToCentral_Cb_, /*ctx=*/&managers_storage_[i]);
     }
 }
 
 ThreadHeap::~ThreadHeap() {
-    for (std::size_t i = 0; i < kClassCount; ++i) {                  // ★ 修正：kClassCount
+    for (std::size_t i = 0; i < k_class_count; ++i) {                  // ★ 修正：kClassCount
         at(managers_storage_[i]).~SizeClassPoolManager();            // ★ 修正：显式析构，走 at(...)
     }
 }
 
-std::size_t ThreadHeap::SizeToClass_(std::size_t nbytes) noexcept {
+std::size_t ThreadHeap::sizeToClass_(std::size_t nbytes) noexcept {
     return SizeClassConfig::SizeToClass(nbytes);
 }
 
 // ---- 与 SizeClassPoolManager 的回调桥 ----
 
-MemSubPool* ThreadHeap::RefillFromMgrCb_(void* ctx) noexcept {
+MemSubPool* ThreadHeap::refillFromCentral_Cb_(void* ctx) noexcept {
     // ctx 是传进来的 ManagerStorage*，需要还原出 SizeClassPoolManager&
     auto* storage_ptr = static_cast<ManagerStorage*>(ctx);
     SizeClassPoolManager& mgr = at(*storage_ptr);
-    const std::size_t bs = mgr.GetBlockSize();
+    const std::size_t bs = mgr.getBlockSize();
 
     // 同上，不能用 CentralHeap::kChunkSize（它是私有的）
     void* raw = CentralHeap::GetInstance().AcquireChunk(SizeClassConfig::kChunkSizeBytes);
@@ -89,7 +89,7 @@ MemSubPool* ThreadHeap::RefillFromMgrCb_(void* ctx) noexcept {
     return new (raw) MemSubPool(bs);
 }
 
-void ThreadHeap::ReturnToCentralCb_(void* ctx, MemSubPool* p) noexcept {
+void ThreadHeap::returnToCentral_Cb_(void* ctx, MemSubPool* p) noexcept {
     (void)ctx; // 当前未使用
     if (!p) return;
 
@@ -100,12 +100,12 @@ void ThreadHeap::ReturnToCentralCb_(void* ctx, MemSubPool* p) noexcept {
 
 // ---- 小工具：托管链表封装 ----
 
-void ThreadHeap::AttachUsed_(BlockHeader* blk) noexcept {
+void ThreadHeap::attachInUse_(BlockHeader* blk) noexcept {
     if (!blk) return;
     managed_list_.attach_used(blk);
 }
 
-std::size_t ThreadHeap::ReclaimOnce_(std::size_t max_reclaim) noexcept {
+std::size_t ThreadHeap::reclaimBatch_(std::size_t max_reclaim) noexcept {
     std::size_t reclaimed = 0;
     std::size_t scanned   = 0;
 
@@ -121,8 +121,8 @@ std::size_t ThreadHeap::ReclaimOnce_(std::size_t max_reclaim) noexcept {
 
         // 线性探测归还（简单但正确；后续可优化成指针→子池的快速定位）
         bool released = false;
-        for (std::size_t i = 0; i < kClassCount; ++i) {                         // ★ 修正：kClassCount
-            if (at(managers_storage_[i]).ReleaseBlock(user_ptr)) {              // ★ 修正：使用 at(...)
+        for (std::size_t i = 0; i < k_class_count; ++i) {                         // ★ 修正：kClassCount
+            if (at(managers_storage_[i]).releaseBlock(user_ptr)) {              // ★ 修正：使用 at(...)
                 released = true;
                 break;
             }

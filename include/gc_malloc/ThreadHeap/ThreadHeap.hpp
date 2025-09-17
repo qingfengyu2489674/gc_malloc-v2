@@ -20,9 +20,9 @@ class MemSubPool;
 class ThreadHeap {
 public:
     // --------------------- 对外公共接口 ---------------------
-    static void*        Allocate(std::size_t nbytes) noexcept;
-    static void         Deallocate(void* ptr) noexcept;
-    static std::size_t  GarbageCollect(std::size_t max_scan = SIZE_MAX) noexcept;
+    static void*        allocate(std::size_t nbytes) noexcept;
+    static void         deallocate(void* ptr) noexcept;
+    static std::size_t  garbageCollect(std::size_t max_scan = SIZE_MAX) noexcept;
 
     ThreadHeap(const ThreadHeap&)            = delete;
     ThreadHeap& operator=(const ThreadHeap&) = delete;
@@ -30,31 +30,31 @@ public:
     ThreadHeap& operator=(ThreadHeap&&)      = delete;
 
 private:
-    static ThreadHeap& Local_() noexcept;
+    static ThreadHeap& local_() noexcept;
 
     ThreadHeap() noexcept;
     ~ThreadHeap();
 
-    static std::size_t SizeToClass_(std::size_t nbytes) noexcept;
+    static std::size_t sizeToClass_(std::size_t nbytes) noexcept;
 
     // ---- 与 SizeClassPoolManager 的回调桥 ----
-    static MemSubPool* RefillFromMgrCb_(void* ctx) noexcept;                 // 获取新子池
-    static void        ReturnToCentralCb_(void* ctx, MemSubPool* p) noexcept; // 归还空子池
+    static MemSubPool* refillFromCentral_Cb_(void* ctx) noexcept;                 // 获取新子池
+    static void        returnToCentral_Cb_(void* ctx, MemSubPool* p) noexcept; // 归还空子池
 
     // ---- 小工具 ----
-    void        AttachUsed_(BlockHeader* blk) noexcept;
-    std::size_t ReclaimOnce_(std::size_t max_scan) noexcept;
+    void        attachInUse_(BlockHeader* blk) noexcept;
+    std::size_t reclaimBatch_(std::size_t max_scan) noexcept;
 
 private:
-    // ★ 编译期常量（来自 SizeClassConfig.hpp，必须是 constexpr）
-    static constexpr std::size_t kClassCount = SizeClassConfig::kClassCount;
+    // 编译期常量（来自 SizeClassConfig.hpp，必须是 constexpr）
+    static constexpr std::size_t k_class_count = SizeClassConfig::kClassCount;
 
-    // ★ 原始对齐存储，避免默认构造；绝不额外分配
+    // 原始对齐存储，避免默认构造；绝不额外分配
     using ManagerStorage =
         std::aligned_storage_t<sizeof(SizeClassPoolManager), alignof(SizeClassPoolManager)>;
-    ManagerStorage managers_storage_[kClassCount];
+    ManagerStorage managers_storage_[k_class_count];
 
-    // ★ 便捷访问封装
+    // 便捷访问封装
     static SizeClassPoolManager& at(ManagerStorage& s) noexcept {
         return *reinterpret_cast<SizeClassPoolManager*>(&s);
     }
