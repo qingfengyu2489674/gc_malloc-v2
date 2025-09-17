@@ -33,7 +33,7 @@ private:
     static ThreadHeap& local() noexcept;
 
     ThreadHeap() noexcept;
-    ~ThreadHeap();
+    virtual ~ThreadHeap();
 
     static std::size_t sizeToClass_(std::size_t nbytes) noexcept;
 

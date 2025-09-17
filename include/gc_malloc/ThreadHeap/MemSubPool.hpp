@@ -20,7 +20,7 @@ public:
 
 public:
     explicit MemSubPool(size_t block_size);
-    ~MemSubPool();
+    virtual ~MemSubPool();
 
     void* allocate();
     void release(void* block_ptr);

@@ -9,6 +9,8 @@ public:
     explicit Bitmap(std::size_t capacity_in_bits,
                     unsigned char* buffer,
                     std::size_t buffer_size_in_bytes);
+    
+    virtual ~Bitmap() = default;
 
     void   markAsUsed(std::size_t bit_index);
     void   markAsFree(std::size_t bit_index);

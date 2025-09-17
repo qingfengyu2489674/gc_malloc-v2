@@ -9,7 +9,7 @@ class MemSubPool;
 class MemSubPoolList {
 public:
     MemSubPoolList() noexcept;
-    ~MemSubPoolList() = default;
+    virtual ~MemSubPoolList() = default;
 
     MemSubPoolList(const MemSubPoolList&)            = delete;
     MemSubPoolList& operator=(const MemSubPoolList&) = delete;

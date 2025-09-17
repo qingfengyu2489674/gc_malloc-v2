@@ -8,7 +8,7 @@
 class ManagedList {
 public:
     ManagedList() noexcept;
-    ~ManagedList() = default;
+    virtual ~ManagedList() = default;
 
     ManagedList(const ManagedList&) = delete;
     ManagedList& operator=(const ManagedList&) = delete;
